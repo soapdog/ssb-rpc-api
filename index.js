@@ -12,7 +12,7 @@ const createConfigFile = () => {
       apps: []
     }
 
-    fs.writeFileSync(allowedAppsFile, JSON.stringify(templateObj))
+    fs.writeFileSync(allowedAppsFile, JSON.stringify(templateObj, null, '\t'))
   }
 }
 
@@ -62,12 +62,12 @@ const saveAppRecord = (origin, permission) => {
     data.apps.push({ origin, permission })
   } else {
     data.apps[appIndex] = { origin, permission }
-  }
+  } 
 
-  fs.writeFileSync(allowedAppsFile, JSON.stringify(data))
+  fs.writeFileSync(allowedAppsFile, JSON.stringify(data, null, '\t'))
 }
 
-
+ 
 eventEmitter.on('server-discovery-response',
   (origin, perm) => saveAppRecord(origin, perm)
 )
@@ -101,6 +101,7 @@ module.exports = {
   getApps,
   saveAppRecord,
   isAppAllowed,
+  configFile: allowedAppsFile,
   init: function (sbot) {
     sbot.ws.use(function (req, res, next) {
       res.setHeader('Access-Control-Allow-Origin', '*')
