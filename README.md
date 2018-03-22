@@ -4,14 +4,14 @@ This is a plugin for [scuttlebutt](http://scuttlebot.io) that makes it easier fo
 
   http://localhost:8989/get-address
 
-That will trigger an custom event on the application that is running the _sbot_ with type `server-discovery-request`, the application is should emit its own `server-discovery-response` granting or deniying access, for example, below is a piece of code that only grants access to requests that are comming from a Firefox Add-on:
+That will trigger an custom event on the application that is running the _sbot_ with type `server-discovery-request`, the application is should emit its own `server-discovery-response` granting, deniying or delaying access, for example, below is a piece of code that only grants access to requests that are comming from a Firefox Add-on:
 
 ```
 eventEmitter.on('server-discovery-request', (origin) => {
   if (origin.startsWith("moz-extension://")) {
-    eventEmitter.emit('server-discovery-response', origin, true)
+    eventEmitter.emit('server-discovery-response', origin, "granted")
   } else {
-    eventEmitter.emit('server-discovery-response', origin, false)
+    eventEmitter.emit('server-discovery-response', origin, "denied")
   }
 })
 ```
@@ -24,6 +24,8 @@ soapdog@SurfaceFafi ~> curl --header "Origin: moz-extension://aaaa" "http://loca
 ```
 
 This way, application (and in my case add-on) developers have a way to run multiple ssb apps without everyone starting their own _sbot_. I made this because when developing pure web applications or add-ons like [patchfox](https://github.com/soapdog/patchfox) we don't have access to UDP broadcasts so it becomes quite hard to find if any application started `sbot` already. If this plugin is adopted by other projects, then it might be easier to one day ship a single `sbot` server that all apps can use.
+
+The app is using a file called `allowed_apps.json` in `.ssb` to persist application access list data. Editing the content of this file will alter the response of this API. For each app there are two fields: `origin` and `permission`, the later can be `granted`, `retry`, `denied`.
 
 This code has been extracted and modified from [minbay](https://github.com/evbogue/minbay/) by [ev](https://github.com/evbogue/).
 
@@ -84,6 +86,13 @@ var createSbot = require('scuttlebot')
   .use(serverDiscovery)
   .use(require('ssb-names'))
 ```
+
+# Other useful APIs
+The plugin also exports:
+
+* `getApps()`: which returns an array of app permissions.
+* `saveAppRecord(origin, permission)`: which records the permission for a given origin in the JSON file.
+* `isAppAllowed(origin)`: returns the permission for a given origin. 
 
 # License 
 MIT

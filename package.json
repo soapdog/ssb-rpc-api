@@ -1,6 +1,6 @@
 {
   "name": "ssb-server-discovery",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "A plugin to help with local server discovery",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,10 @@
     "scuttlebutt",
     "plugin"
   ],
+  "dependencies": {
+    "minimist": "^1.2.0",
+    "ssb-config": "^2.2.0"
+  },
   "author": "Andre Alves Garzia <andre@andregarzia.com>",
   "license": "MIT",
   "bugs": {
