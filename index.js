@@ -62,12 +62,12 @@ const saveAppRecord = (origin, permission) => {
     data.apps.push({ origin, permission })
   } else {
     data.apps[appIndex] = { origin, permission }
-  } 
+  }
 
   fs.writeFileSync(allowedAppsFile, JSON.stringify(data, null, '\t'))
 }
 
- 
+
 eventEmitter.on('server-discovery-response',
   (origin, perm) => saveAppRecord(origin, perm)
 )
@@ -76,7 +76,7 @@ function replyWithPending(res, req) {
   let handled = eventEmitter.emit('server-discovery-request', req.headers.origin)
   res.end(JSON.stringify({
     status: "pending",
-    retry: 1500,
+    retry: 3500,
     handled
   }))
 }
@@ -89,14 +89,16 @@ function replyWithAddress(res, sbot) {
 }
 
 function replyWithDenial(res) {
+  res.statusCode = 403
   res.end(JSON.stringify({
-    status: "denied"
+    status: "denied",
+    msg: "only accepts requests of authorized apps"
   }))
 }
 
 module.exports = {
-  name: 'server-discovery',
-  version: '1.0.0',
+  name: 'rpc-api',
+  version: '3.0.0',
   eventEmitter: eventEmitter,
   getApps,
   saveAppRecord,
@@ -105,10 +107,14 @@ module.exports = {
   init: function (sbot) {
     sbot.ws.use(function (req, res, next) {
       res.setHeader('Access-Control-Allow-Origin', '*')
+
+      if (!req.headers.origin) {
+        replyWithDenial(res)
+      }
+
+      /// Server discovery ///
       if (req.url === '/get-address') {
-        if (!req.headers.origin) {
-          replyWithDenial(res)
-        }
+
         console.log("######### Discovery Request #############", req.headers.origin)
 
         switch (isAppAllowed(req.headers.origin)) {
@@ -122,8 +128,65 @@ module.exports = {
             replyWithDenial(res)
             break
         }
-      } else {
-        next()
+
+
+      }
+
+      /// RPC API ///
+      let perms = serverDiscovery.isAppAllowed(req.headers.origin)
+      if (perms !== "granted") {
+        res.statusCode = 403
+        res.end(JSON.stringify({ status: "denied", msg: "only accepts requests of authorized apps" }))
+        return
+      }
+
+      switch (req.url) {
+        case "/api/whoami":
+          sbot.whoami((err, feed) => {
+            res.end(JSON.stringify(feed))
+          })
+          break
+        case "/api/publish":
+          sbot.publish(msg.data, (err, data) => {
+            if (err) {
+              res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+            } else {
+              res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
+            }
+          })
+          break;
+        case "/api/get":
+          sbot.get(msg.id, (err, data) => {
+            if (err) {
+              res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+            } else {
+              if (data.content.type == 'post') {
+                data.content.markdown = md.block(data.content.text, data.content.mentions)
+              }
+              res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
+            }
+          })
+          break;
+        case "/api/get-related-messages":
+          sbot.relatedMessages(msg.data, (err, data) => {
+            if (err) {
+              res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+            } else {
+              res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
+            }
+          })
+          break;
+        case "/api/blobs/get":
+          sbot.blobs.get(msg.id, (err, data) => {
+            if (err) {
+              res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+            } else {
+              res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
+            }
+          })
+          break;
+        default:
+          next()
       }
     })
   }

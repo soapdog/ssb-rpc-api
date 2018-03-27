@@ -1,14 +1,14 @@
 {
-  "name": "ssb-server-discovery",
+  "name": "ssb-rpc-api",
   "version": "3.0.0",
-  "description": "A plugin to help with local server discovery",
+  "description": "A plugin to offer an HTTP API to sbot",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/soapdog/ssb-server-discovery.git"
+    "url": "git+https://github.com/soapdog/ssb-rpc-api.git"
   },
   "keywords": [
     "ssb",
@@ -22,7 +22,7 @@
   "author": "Andre Alves Garzia <andre@andregarzia.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/soapdog/ssb-server-discovery/issues"
+    "url": "https://github.com/soapdog/ssb-rpc-api/issues"
   },
-  "homepage": "https://github.com/soapdog/ssb-server-discovery#readme"
+  "homepage": "https://github.com/soapdog/ssb-rpc-api#readme"
 }
