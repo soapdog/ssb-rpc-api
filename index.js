@@ -110,6 +110,7 @@ module.exports = {
 
       if (!req.headers.origin) {
         replyWithDenial(res)
+        return
       }
 
       /// Server discovery ///
@@ -130,63 +131,64 @@ module.exports = {
         }
 
 
-      }
+      } else {
 
-      /// RPC API ///
-      let perms = isAppAllowed(req.headers.origin)
-      if (perms !== "granted") {
-        res.statusCode = 403
-        res.end(JSON.stringify({ status: "denied", msg: "only accepts requests of authorized apps" }))
-        return
-      }
+        /// RPC API ///
+        let perms = isAppAllowed(req.headers.origin)
+        if (perms !== "granted") {
+          res.statusCode = 403
+          res.end(JSON.stringify({ status: "denied", msg: "only accepts requests of authorized apps" }))
+          return
+        }
 
-      switch (req.url) {
-        case "/api/whoami":
-          sbot.whoami((err, feed) => {
-            res.end(JSON.stringify(feed))
-          })
-          break
-        case "/api/publish":
-          sbot.publish(msg.data, (err, data) => {
-            if (err) {
-              res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
-            } else {
-              res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
-            }
-          })
-          break;
-        case "/api/get":
-          sbot.get(msg.id, (err, data) => {
-            if (err) {
-              res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
-            } else {
-              if (data.content.type == 'post') {
-                data.content.markdown = md.block(data.content.text, data.content.mentions)
+        switch (req.url) {
+          case "/api/whoami":
+            sbot.whoami((err, feed) => {
+              res.end(JSON.stringify(feed))
+            })
+            break
+          case "/api/publish":
+            sbot.publish(msg.data, (err, data) => {
+              if (err) {
+                res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+              } else {
+                res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
               }
-              res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
-            }
-          })
-          break;
-        case "/api/get-related-messages":
-          sbot.relatedMessages(msg.data, (err, data) => {
-            if (err) {
-              res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
-            } else {
-              res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
-            }
-          })
-          break;
-        case "/api/blobs/get":
-          sbot.blobs.get(msg.id, (err, data) => {
-            if (err) {
-              res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
-            } else {
-              res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
-            }
-          })
-          break;
-        default:
-          next()
+            })
+            break;
+          case "/api/get":
+            sbot.get(msg.id, (err, data) => {
+              if (err) {
+                res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+              } else {
+                if (data.content.type == 'post') {
+                  data.content.markdown = md.block(data.content.text, data.content.mentions)
+                }
+                res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
+              }
+            })
+            break;
+          case "/api/get-related-messages":
+            sbot.relatedMessages(msg.data, (err, data) => {
+              if (err) {
+                res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+              } else {
+                res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
+              }
+            })
+            break;
+          case "/api/blobs/get":
+            sbot.blobs.get(msg.id, (err, data) => {
+              if (err) {
+                res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+              } else {
+                res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
+              }
+            })
+            break;
+          default:
+            next()
+        }
       }
     })
   }
