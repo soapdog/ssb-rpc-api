@@ -92,7 +92,7 @@ function replyWithDenial(res) {
   res.statusCode = 403
   res.end(JSON.stringify({
     status: "denied",
-    msg: "only accepts requests of authorized apps"
+    msg: "only accepts requests from authorized apps"
   }))
 }
 
@@ -133,7 +133,7 @@ module.exports = {
       }
 
       /// RPC API ///
-      let perms = serverDiscovery.isAppAllowed(req.headers.origin)
+      let perms = isAppAllowed(req.headers.origin)
       if (perms !== "granted") {
         res.statusCode = 403
         res.end(JSON.stringify({ status: "denied", msg: "only accepts requests of authorized apps" }))

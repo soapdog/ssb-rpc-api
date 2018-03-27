@@ -1,6 +1,33 @@
-# ssb-server-discovery
+# ssb-rpc-api
 
-This is a plugin for [scuttlebutt](http://scuttlebot.io) that makes it easier for applications to find the running `sbot`. It provides a listener at:
+This is a plugin for [scuttlebutt](http://scuttlebot.io) that provides an HTTP API to `sbot`. 
+
+## Access Control
+The idea behind this plugin is that only authorized apps can connect to `sbot`. Each app is identified by its _HTTP Origin Header_ and a file at `.ssb/allowed_apps.json` contains entries for all the apps that tried contacting `sbot` through this plugin. Example:
+
+```
+{
+  "apps": [
+          {
+                  "origin": "http://localhost:3000",
+                  "permission": "granted"
+          },
+          {
+                  "origin": "http://localhost:8000",
+                  "permission": "denied"
+          },
+          {
+                  "origin": "http://localhost:8001",
+                  "permission": "retry"
+          }
+  ]
+}
+```
+
+There are three states that an app can be in this file &mdash; granted, denied, retry &mdash; with the later meaning that the application is allowed to retry contacting `sbot` later. This is the default state that an app entries into the file.
+
+## Service Discovery
+Web Clients don't have access to UDP Broadcasts, so they can't find the running `sbot`. The listener below can help with that:
 
   http://localhost:8989/get-address
 
@@ -29,10 +56,10 @@ The app is using a file called `allowed_apps.json` in `.ssb` to persist applicat
 
 This code has been extracted and modified from [minbay](https://github.com/evbogue/minbay/) by [ev](https://github.com/evbogue/).
 
-# Spec of responses
+### Spec of responses
 That URL responds with JSON.
 
-## Pending request
+#### Pending request
 
 This is returned while the sbot is awaiting permission from the user to reply with the address.
 
@@ -43,7 +70,7 @@ This is returned while the sbot is awaiting permission from the user to reply wi
 }
 ```
 
-## Permission granted
+#### Permission granted
 
 This returns the _websocket address with the public key in it. It will only return that after the user has granted perms.
 
@@ -54,7 +81,7 @@ This returns the _websocket address with the public key in it. It will only retu
 }
 ```
 
-## Permission denied
+#### Permission denied
 
 If the user declines sharing the address and key, then:
 
@@ -64,12 +91,27 @@ If the user declines sharing the address and key, then:
 }
 ```
 
-# Usage
+## RPC API
+The plugin exposes a series of APIs from `sbot` as URLs. If an app tries to use any of the URLs below and is not marked as `granted` in `allowed_apps.json`, the plugin will reply with status code 403 and:
+
+```
+{"status":"denied","msg":"only accepts requests from authorized apps"}
+```
+
+### whoami
+**URL:** http://localhost:8989/api/whoami
+
+**Example response:**
+```
+{"id":"@NoTARealUserKey0372085=.ed25519"}
+```
+
+### Usage
 
 For example:
 
 ```
-var serverDiscovery = require('ssb-server-discovery')
+var rpc = require('ssb-rpc-api')
 var eventEmitter = serverDiscovery.eventEmitter
 
 var createSbot = require('scuttlebot')
@@ -83,7 +125,7 @@ var createSbot = require('scuttlebot')
   .use(require('ssb-ooo'))
   .use(require('ssb-ebt'))
   .use(require('ssb-ws'))
-  .use(serverDiscovery)
+  .use(rpc)
   .use(require('ssb-names'))
 ```
 
