@@ -37,8 +37,7 @@ const isAppAllowed = (origin) => {
   let app = data.apps.find(finder)
 
   if (typeof app == "undefined") {
-    saveAppRecord(origin, "retry")
-    return "retry"
+    return "unknown"
   }
 
   return app.permission
@@ -67,11 +66,6 @@ const saveAppRecord = (origin, permission) => {
   fs.writeFileSync(allowedAppsFile, JSON.stringify(data, null, '\t'))
 }
 
-
-eventEmitter.on('server-discovery-response',
-  (origin, perm) => saveAppRecord(origin, perm)
-)
-
 function replyWithPending(res, req) {
   let handled = eventEmitter.emit('server-discovery-request', req.headers.origin)
   res.end(JSON.stringify({
@@ -95,6 +89,31 @@ function replyWithDenial(res) {
     msg: "only accepts requests from authorized apps"
   }))
 }
+
+
+function collectRequestData(request, callback) {
+  const JSON_TYPE = 'application/json';
+  if (request.headers['content-type'] === JSON_TYPE) {
+    let body = '';
+    request.on('data', chunk => {
+      body += chunk.toString();
+    });
+    request.on('end', () => {
+      console.log("body", body)
+      callback(null, JSON.parse(body));
+    });
+  }
+  else {
+    callback("error: data is not JSON encoded", null);
+  }
+}
+
+
+// EVENT //
+
+eventEmitter.on('server-discovery-response',
+  (origin, perm) => saveAppRecord(origin, perm)
+)
 
 module.exports = {
   name: 'rpc-api',
@@ -127,6 +146,9 @@ module.exports = {
             break
           case "denied":
             replyWithDenial(res)
+            break
+          default:
+            replyWithPending(res, req)
             break
         }
 
@@ -169,11 +191,18 @@ module.exports = {
             })
             break;
           case "/api/get-related-messages":
-            sbot.relatedMessages(msg.data, (err, data) => {
+            // todo: this is missing stuff, the request data
+            collectRequestData(req, (err, msg) => {
               if (err) {
-                res.end(JSON.stringify({ cmd: msg.cmd, error: err, data: false }))
+                res.end(JSON.stringify({ cmd: "get-related-messages", error: err, data: false }))
               } else {
-                res.end(JSON.stringify({ cmd: msg.cmd, error: false, data: data }))
+                sbot.relatedMessages(msg.data, (err, data) => {
+                  if (err) {
+                    res.end(JSON.stringify({ cmd: "get-related-messages", error: err, data: false }))
+                  } else {
+                    res.end(JSON.stringify({ cmd: "get-related-messages", error: false, data: data }))
+                  }
+                })
               }
             })
             break;
